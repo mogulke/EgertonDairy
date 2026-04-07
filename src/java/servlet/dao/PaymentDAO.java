@@ -1,6 +1,6 @@
-package dao;
+package servlet.dao;
 
-import model.Payment;
+import servlet.model.Payment;
 
 import java.sql.*;
 
@@ -125,8 +125,8 @@ public class PaymentDAO {
         // Update these credentials to match your local MySQL setup
         return DriverManager.getConnection(
             "jdbc:mysql://localhost:3306/dairy_sales_db",
-            "root",      // your MySQL username
-            "password"   // your MySQL password
+            "admin",      // your MySQL username
+            "admin"       // your MySQL password
         );
     }
 }

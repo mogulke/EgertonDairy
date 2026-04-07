@@ -1,4 +1,4 @@
-package service;
+package servlet.service;
 
 import java.io.*;
 import java.net.*;
@@ -32,7 +32,6 @@ public class MpesaService {
      * (for a school project, this is fine; production would cache it).
      */
     public String getOAuthToken() throws IOException {
-        // Base64 encode "ConsumerKey:ConsumerSecret"
         String credentials = MpesaConfig.CONSUMER_KEY + ":" + MpesaConfig.CONSUMER_SECRET;
         String encoded = Base64.getEncoder()
                                .encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
@@ -85,17 +84,18 @@ public class MpesaService {
 
         // Build JSON request body
         String jsonBody = "{"
-            + "\"BusinessShortCode\": \"" + MpesaConfig.SHORTCODE + "\","
-            + "\"Password\": \""          + password + "\","
-            + "\"Timestamp\": \""         + timestamp + "\","
-            + "\"TransactionType\": \""   + MpesaConfig.TRANSACTION_TYPE + "\","
-            + "\"Amount\": "              + amount + ","
-            + "\"PartyA\": \""            + phone + "\","
-            + "\"PartyB\": \""            + MpesaConfig.SHORTCODE + "\","
-            + "\"PhoneNumber\": \""       + phone + "\","
-            + "\"CallBackURL\": \""       + MpesaConfig.CALLBACK_URL + "\","
-            + "\"AccountReference\": \""  + MpesaConfig.ACCOUNT_REFERENCE + "-" + orderId + "\","
-            + "\"TransactionDesc\": \""   + MpesaConfig.TRANSACTION_DESC + "\""
+            + "\"BusinessShortCode\": \"" + MpesaConfig.SHORTCODE          + "\","
+            + "\"Password\": \""           + password                       + "\","
+            + "\"Timestamp\": \""          + timestamp                      + "\","
+            + "\"TransactionType\": \""    + MpesaConfig.TRANSACTION_TYPE   + "\","
+            + "\"Amount\": "               + amount                         + ","
+            + "\"PartyA\": \""             + phone                          + "\","
+            + "\"PartyB\": \""             + MpesaConfig.SHORTCODE          + "\","
+            + "\"PhoneNumber\": \""        + phone                          + "\","
+            + "\"CallBackURL\": \""        + MpesaConfig.CALLBACK_URL       + "\","
+            + "\"AccountReference\": \""   + MpesaConfig.ACCOUNT_REFERENCE
+                                           + "-" + orderId                  + "\","
+            + "\"TransactionDesc\": \""    + MpesaConfig.TRANSACTION_DESC   + "\""
             + "}";
 
         URL url = new URL(MpesaConfig.STK_PUSH_URL);
@@ -117,7 +117,6 @@ public class MpesaService {
         System.out.println("[MpesaService] STK Push response (" + responseCode + "): " + response);
 
         if (responseCode == 200) {
-            // Response contains CheckoutRequestID — store this to match the callback later
             return extractJsonValue(response, "CheckoutRequestID");
         } else {
             return null;
@@ -155,9 +154,10 @@ public class MpesaService {
      * Handles: 0712345678, +254712345678, 254712345678
      */
     public String normalizePhone(String phone) {
+        if (phone == null) return "";
         phone = phone.trim().replaceAll("\\s+", "");
         if (phone.startsWith("+")) phone = phone.substring(1);
-        if (phone.startsWith("0"))  phone = "254" + phone.substring(1);
+        if (phone.startsWith("0")) phone = "254" + phone.substring(1);
         return phone;
     }
 }

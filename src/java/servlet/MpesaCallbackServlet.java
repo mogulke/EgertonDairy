@@ -1,6 +1,6 @@
 package servlet;
 
-import dao.PaymentDAO;
+import servlet.dao.PaymentDAO;
 
 import javax.servlet.*;
 import javax.servlet.annotation.WebServlet;

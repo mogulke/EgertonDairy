@@ -1,4 +1,4 @@
-package model;
+package servlet.model;
 
 import java.sql.Timestamp;
 
