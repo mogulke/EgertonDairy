@@ -114,7 +114,7 @@ public class PaymentDAO {
     }
 
     // ── Database connection ───────────────────────────────
-    //    Replace this with DBConnection.getConnection() once Risper's
+ 
     //    shared utility class is available in the project.
     private Connection getConnection() throws SQLException {
         try {
@@ -125,7 +125,7 @@ public class PaymentDAO {
         // Update these credentials to match your local MySQL setup
         return DriverManager.getConnection(
             "jdbc:mysql://localhost:3306/dairy_sales_db",
-            "admin",      // your MySQL username
+            "root",      // your MySQL username
             "admin"       // your MySQL password
         );
     }
