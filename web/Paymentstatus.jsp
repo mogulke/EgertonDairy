@@ -2,11 +2,12 @@
 <%@ page import="javax.servlet.http.HttpSession" %>
 <%
     /* Redirect to login if not logged in */
-    HttpSession sess = request.getSession(false);
-    if (sess == null || sess.getAttribute("user") == null) {
-        response.sendRedirect(request.getContextPath() + "/login.jsp");
-        return;
-    }
+    //HttpSession sess = request.getSession(false);
+    //if (sess == null || sess.getAttribute("user") == null) {
+     //   response.sendRedirect(request.getContextPath() + "/login.jsp");
+     //   return;
+    //}
+    HttpSession sess = request.getSession(true);
 
     String paymentStatus   = (String)  sess.getAttribute("paymentStatus");
     String transactionCode = (String)  sess.getAttribute("transactionCode");

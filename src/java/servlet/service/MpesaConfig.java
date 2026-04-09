@@ -23,7 +23,7 @@ package servlet.service;
 public class MpesaConfig {
 
     // ── Toggle simulation mode ────────────────────────
-    public static final boolean SIMULATE = true;  // set false for real M-Pesa
+    public static final boolean SIMULATE = false;  // set false for real M-Pesa
 
     // ── Daraja API credentials (Sandbox) ─────────────
     public static final String CONSUMER_KEY    = "2F73hyRmVEqRR2EuSqSPLV2qNG9yViVi6GoLjXxVJKYMgeMr";  // paste your key here
