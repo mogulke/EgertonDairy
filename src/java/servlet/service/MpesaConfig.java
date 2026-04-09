@@ -23,11 +23,11 @@ package servlet.service;
 public class MpesaConfig {
 
     // ── Toggle simulation mode ────────────────────────
-    public static final boolean SIMULATE = false;  // set false for real M-Pesa
+    public static final boolean SIMULATE = false;  //false for real M-Pesa
 
     // ── Daraja API credentials (Sandbox) ─────────────
-    public static final String CONSUMER_KEY    = "2F73hyRmVEqRR2EuSqSPLV2qNG9yViVi6GoLjXxVJKYMgeMr";  // paste your key here
-    public static final String CONSUMER_SECRET = "g8uaC9jKMHU8oEilMZkLjxjAa3TqrJhXtIgW72JAOgHrceT3571k9WBgpFGqEMLT";  // paste your secret here
+    public static final String CONSUMER_KEY    = "OVuJ2L3dZXKghARmXRRalMMBAxr1KGPfnFTOsALRLbJEKckB";  
+    public static final String CONSUMER_SECRET = "zJDR4NWWjWlRkwEqArWe19HO7EGCRSzmTJvH29iSpz4qn2wKOOPNyqot5Z26lkW1";  
 
     // ── Lipa Na M-Pesa Online (STK Push) ─────────────
     public static final String SHORTCODE         = "174379";
@@ -36,9 +36,9 @@ public class MpesaConfig {
     public static final String ACCOUNT_REFERENCE = "DairySales";
     public static final String TRANSACTION_DESC  = "Dairy Product Purchase";
 
-    // ── Your callback URL (use ngrok in development) ──
+    // ── callback URL (ngrok in development) ──
     // Example: "https://abc123.ngrok.io/DairySales/mpesa/callback"
-    public static final String CALLBACK_URL  = "https://YOUR_NGROK_URL/DairySales/mpesa/callback";
+    public static final String CALLBACK_URL  = "https://58d1-2c0f-fe38-2411-d89c-cdda-171-8d76-edec.ngrok-free.app/DairySales/mpesa/callback";
 
     // ── Daraja API endpoints (Sandbox) ───────────────
     public static final String OAUTH_URL     = "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials";

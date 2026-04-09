@@ -10,7 +10,7 @@ import java.sql.*;
  * Handles all database operations for the `payments` table.
  * Also updates the `orders` table status when payment completes.
  *
- * Assumes a DBConnection utility exists (created by Risper / shared).
+ 
  * If DBConnection isn't ready yet, use the inline getConnection()
  * method provided at the bottom of this file.
  * ─────────────────────────────────────────────────────

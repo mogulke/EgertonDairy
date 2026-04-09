@@ -6,50 +6,35 @@ import javax.servlet.*;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
 import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.sql.SQLException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
  * MpesaCallbackServlet.java
  * ─────────────────────────────────────────────────────
  * Mapped to: /mpesa/callback
- * (matches MpesaConfig.CALLBACK_URL path)
  *
- * Safaricom calls this URL asynchronously after the customer
- * approves or declines the STK Push on their phone.
+ * Safaricom calls this URL after customer approves/declines STK Push.
  *
- * Callback JSON structure (success):
- * {
- *   "Body": {
- *     "stkCallback": {
- *       "ResultCode": 0,
- *       "CheckoutRequestID": "ws_CO_...",
- *       "CallbackMetadata": {
- *         "Item": [
- *           { "Name":"Amount",            "Value":500 },
- *           { "Name":"MpesaReceiptNumber","Value":"QBK34VY..." },
- *           { "Name":"PhoneNumber",       "Value":254712... }
- *         ]
- *       }
- *     }
- *   }
- * }
+ * The result is stored in a static ConcurrentHashMap (paymentResults).
+ * Paymentstatus.jsp reads from this map on each auto-refresh to check
+ * if the payment has completed — this is necessary because Safaricom's
+ * callback arrives on a different thread with no access to browser sessions.
  *
- * Callback JSON structure (failure / user cancelled):
- * {
- *   "Body": {
- *     "stkCallback": {
- *       "ResultCode": 1032,   (1032 = cancelled by user)
- *       "CheckoutRequestID": "ws_CO_..."
- *     }
- *   }
- * }
+ * Map key   → CheckoutRequestID (e.g. "ws_CO_09042026...")
+ * Map value → "Completed:QBK34VY..." or "Failed"
  * ─────────────────────────────────────────────────────
- * Author : Samuel (Payment Module)
+ * Author: Samuel (Payment Module)
  */
 @WebServlet("/mpesa/callback")
 public class MpesaCallbackServlet extends HttpServlet {
+
+    /**
+     * Static map shared across all servlet instances.
+     * Paymentstatus.jsp reads: MpesaCallbackServlet.paymentResults.get(checkoutId)
+     */
+    public static final ConcurrentHashMap<String, String> paymentResults
+            = new ConcurrentHashMap<>();
 
     private final PaymentDAO paymentDAO = new PaymentDAO();
 
@@ -57,68 +42,78 @@ public class MpesaCallbackServlet extends HttpServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
-        // Read raw JSON body from Safaricom
+        // Read raw JSON body sent by Safaricom
         String body = req.getReader().lines()
                         .collect(Collectors.joining("\n"));
 
         System.out.println("[MpesaCallback] Received:\n" + body);
 
-        // Always respond 200 immediately so Safaricom doesn't retry
+        // Always respond 200 immediately — Safaricom will retry if we don't
         resp.setStatus(HttpServletResponse.SC_OK);
         resp.setContentType("application/json");
         resp.getWriter().write("{\"ResultCode\":0,\"ResultDesc\":\"Accepted\"}");
 
-        // Parse and process in the background
+        // Process result after responding
         try {
             processCallback(body);
         } catch (Exception e) {
             e.printStackTrace();
-            // Don't throw — we already sent 200 to Safaricom
+            // Never throw — we already responded 200 to Safaricom
         }
     }
 
-    private void processCallback(String json) throws SQLException {
-        // Extract ResultCode
-        String resultCodeStr = extractJsonValue(json, "ResultCode");
+    private void processCallback(String json) {
+        String resultCodeStr     = extractJsonValue(json, "ResultCode");
+        String checkoutRequestId = extractJsonValue(json, "CheckoutRequestID");
+
         int resultCode = resultCodeStr != null ? Integer.parseInt(resultCodeStr.trim()) : -1;
 
-        // Extract CheckoutRequestID
-        String checkoutRequestId = extractJsonValue(json, "CheckoutRequestID");
+        System.out.println("[MpesaCallback] ResultCode: " + resultCode);
+        System.out.println("[MpesaCallback] CheckoutRequestID: " + checkoutRequestId);
+
         if (checkoutRequestId == null) {
-            System.err.println("[MpesaCallback] No CheckoutRequestID in callback body.");
+            System.out.println("[MpesaCallback] ERROR — No CheckoutRequestID found.");
             return;
         }
 
         if (resultCode == 0) {
-            // ── SUCCESS ──────────────────────────────
+            // ── SUCCESS ──────────────────────────────────────
             String mpesaReceipt = extractJsonValue(json, "MpesaReceiptNumber");
+            System.out.println("[MpesaCallback] SUCCESS — Receipt: " + mpesaReceipt);
 
-            // Update payment: Pending → Completed, store real receipt number
-            boolean updated = paymentDAO.updatePaymentStatus(
-                    checkoutRequestId, "Completed", mpesaReceipt);
+            // Store in map so Paymentstatus.jsp can read it on next refresh
+            paymentResults.put(checkoutRequestId,
+                    "Completed:" + (mpesaReceipt != null ? mpesaReceipt : ""));
 
-            if (updated) {
-                // Also update the order status to "confirmed"
-                // We need the orderId — fetch payment record to get it
-                // (Alternative: PaymentDAO.getPaymentByTransactionCode — add if needed)
-                System.out.println("[MpesaCallback] Payment completed. Receipt: " + mpesaReceipt);
+            // Update DB — Pending → Completed (best effort, DB may not be set up yet)
+            try {
+                paymentDAO.updatePaymentStatus(checkoutRequestId, "Completed", mpesaReceipt);
+            } catch (Exception e) {
+                System.out.println("[MpesaCallback] DB update skipped (DB not ready): " + e.getMessage());
             }
 
         } else {
-            // ── FAILURE / CANCELLED ───────────────────
-            // ResultCode 1032 = cancelled by user
-            // ResultCode 1037 = timeout
-            System.out.println("[MpesaCallback] Payment failed. ResultCode: " + resultCode);
-            paymentDAO.updatePaymentStatus(checkoutRequestId, "Failed", null);
+            // ── FAILURE / CANCELLED ───────────────────────────
+            // 1032 = cancelled by user, 1037 = timeout
+            System.out.println("[MpesaCallback] FAILED — ResultCode: " + resultCode);
+
+            paymentResults.put(checkoutRequestId, "Failed");
+
+            try {
+                paymentDAO.updatePaymentStatus(checkoutRequestId, "Failed", null);
+            } catch (Exception e) {
+                System.out.println("[MpesaCallback] DB update skipped: " + e.getMessage());
+            }
         }
     }
 
     /**
-     * Minimal JSON value extractor — same as in MpesaService.
-     * Extracts first occurrence of "key":"value" from flat or nested JSON.
+     * Extracts a value from JSON for both:
+     *   "Key":"Value"   (string)
+     *   "Key":123       (number)
      */
     private String extractJsonValue(String json, String key) {
-        // Try string value: "Key":"Value"
+        // String value
         String searchStr = "\"" + key + "\":\"";
         int start = json.indexOf(searchStr);
         if (start != -1) {
@@ -126,12 +121,11 @@ public class MpesaCallbackServlet extends HttpServlet {
             int end = json.indexOf("\"", start);
             return end == -1 ? null : json.substring(start, end);
         }
-        // Try numeric value: "Key":123
+        // Numeric value
         String searchNum = "\"" + key + "\":";
         start = json.indexOf(searchNum);
         if (start != -1) {
             start += searchNum.length();
-            // skip whitespace
             while (start < json.length() && json.charAt(start) == ' ') start++;
             int end = start;
             while (end < json.length() && (Character.isDigit(json.charAt(end))

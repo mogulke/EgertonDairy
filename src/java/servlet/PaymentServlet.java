@@ -49,7 +49,7 @@ public class PaymentServlet extends HttpServlet {
 
         try {
             int    orderId = Integer.parseInt(orderIdParam);
-            double amount  = 1440.00; // test value — replace with paymentDAO.getOrderAmount(orderId) when DB is ready
+            double amount  = 1.00; // test value — replace with paymentDAO.getOrderAmount(orderId) when DB is ready
 
             // ── Create Payment Java Bean and set its properties ──
             Payment payment = new Payment();
@@ -59,7 +59,7 @@ public class PaymentServlet extends HttpServlet {
             payment.setPaymentStatus("Pending");
 
             // ── Calculate subtotal and store for EL ──────────────
-            double deliveryFee = 150.00;
+            double deliveryFee = 1.00;
             double subtotal    = amount - deliveryFee;
             if (subtotal < 0) subtotal = amount;
 
@@ -103,7 +103,7 @@ public class PaymentServlet extends HttpServlet {
             Payment payment = new Payment();
             payment.setOrderId(orderId);
             payment.setAmount(amount);
-            double deliveryFee = 150.00;
+            double deliveryFee = 1.00;
             req.setAttribute("payment",      payment);
             req.setAttribute("deliveryFee",  deliveryFee);
             req.setAttribute("subtotal",     amount - deliveryFee);
@@ -127,11 +127,12 @@ public class PaymentServlet extends HttpServlet {
                 session.setAttribute("paymentStatus",   "Completed");
                 session.setAttribute("transactionCode", checkoutRequestId);
                 session.setAttribute("paymentOrderId",  orderId);
+                session.setAttribute("paymentAmount",   amount);
                 resp.sendRedirect(req.getContextPath() + "/Paymentstatus.jsp");
                 return;
             }
 
-            // ── REAL M-PESA STK PUSH ──────────────────
+            // ── M-PESA STK PUSH ──────────────────
             checkoutRequestId = mpesaService.initiateStkPush(phone, (int) Math.ceil(amount), orderId);
 
             if (checkoutRequestId == null) {
